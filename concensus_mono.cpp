@@ -1,23 +1,21 @@
 #include <string>
-#include <map>
 #include <vector>
 #include <fstream>
 #include <iostream>
 #include <cstdlib> 
 #include <cstring>
-#include <set>
 #include <cctype>
 #include <sstream>
 #include <algorithm>
 #include <memory>
+#include <tuple>
+#include <map>
 
 #include "BKTree.h"
 #include "fastq_reader.hpp"
 #include "fastq_writer.hpp"
 #include "barcode_loader.cpp"
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/regex.hpp>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
@@ -27,6 +25,7 @@
 #include <unistd.h>
 
 namespace po = boost::program_options;
+typedef std::tuple<std::string, std::string, int> match_t;
 
 class concensus_mono {
     public:
@@ -36,6 +35,7 @@ class concensus_mono {
         void print_help();
         void load_barcodes();
         std::string vec_to_str(std::vector<std::string> my_vector);
+        void write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple); 
     private:
 		// Input variables pushed through command line
 		std::string i5_file_str;
@@ -55,6 +55,8 @@ class concensus_mono {
         BCLoader i7_loader;
         BCLoader sbc_loader;
         BCLoader stagger_loader;
+        //std::unordered_map<std::string, long> count_map; 
+        std::map<std::string, long> count_map; 
 
 };
 
@@ -66,29 +68,28 @@ void concensus_mono::print_help() {
         " -p <prefix_str> -o <outdir>\n\n";
 }
 
-
 void concensus_mono::load_barcodes() {
     i5_loader = BCLoader(i5_file_str);
     i5_loader.load_map();
     i5_loader.load_tree();
-    i5_loader.print_map();
-    i5_loader.print_index();
+    //i5_loader.print_map();
+    //i5_loader.print_index();
 
     i7_loader = BCLoader(i7_file_str);
     i7_loader.load_map();
     i7_loader.load_tree();
-    i7_loader.print_map();
-    i7_loader.print_index();
+    //i7_loader.print_map();
+    //i7_loader.print_index();
 
     sbc_loader = BCLoader(sbc_file_str);
     sbc_loader.load_map();
     sbc_loader.load_tree();    
-    sbc_loader.print_map();
-    sbc_loader.print_index();
+    //sbc_loader.print_map();
+    //sbc_loader.print_index();
 
     stagger_loader = BCLoader(stagger_file_str);
     stagger_loader.load_map();
-    stagger_loader.print_map();
+    //stagger_loader.print_map();
 
 }
 
@@ -111,7 +112,7 @@ bool concensus_mono::parse_args(int argc, char* argv[]) {
 		("outdir,o", po::value<std::string>(&outdirpath)->required(), "Output directory")	
 		("mm_i5", po::value(&mm_i5)->default_value(1), "Optional/Maximum allowed mismatches for i5 barcode.")
 		("mm_i7", po::value(&mm_i7)->default_value(1), "Optional/Maximum allowed mismatches for i7 barcode.")
-		("mm_sbc", po::value(&mm_sbc)->default_value(3), "Optional/Maximum allowed mismatches for sbc barcode.")
+		("mm_sbc", po::value(&mm_sbc)->default_value(2), "Optional/Maximum allowed mismatches for sbc barcode.")
 	;
 
     po::variables_map vm;
@@ -204,7 +205,22 @@ std::string concensus_mono::vec_to_str(std::vector<std::string> lvec) {
     
 }
 
-
+void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple) {
+    
+    std::string i5_mt = std::get<0>(i5_tuple);
+    std::string i7_mt = std::get<0>(i7_tuple);
+    std::string sbc_mt = std::get<0>(sbc_tuple);
+ 
+    if (i5_mt.compare("unique") == 0 && i7_mt.compare("unique") == 0 && sbc_mt.compare("unique") == 0) {
+        //std::cout << "All unique" << "\n";
+        std::string i5_val = std::get<1>(i5_tuple);
+        std::string i7_val = std::get<1>(i7_tuple);
+        std::string sbc_val = std::get<1>(sbc_tuple);
+        std::string combined_str = i5_val + "_" + i7_val + "_" + sbc_val;
+        //std::cout << "combined_str: " << combined_str << "\n";
+        count_map[combined_str] += 1;
+    }
+}
 
 
 void concensus_mono::core_engine() {
@@ -238,7 +254,6 @@ void concensus_mono::core_engine() {
     fastq_reader long_file(long_read_str);
 
     long read_count = 0;
-    std::cout << "reached here!" << "\n";
     while (short_file.getline(short_word1)) {
         if (!short_file.getline(short_word2)) { break; }
         if (!short_file.getline(short_word3)) { break; }
@@ -259,15 +274,24 @@ void concensus_mono::core_engine() {
         int sbc_start = i5_len + stagger_len + gap_after_stagger;
         sbc_local = long_word2.substr(sbc_start, sbc_len);
 
-        const std::vector<std::string>& i5_vals = i5_loader.vals_from_tree(i5_local, mm_i5);
-        const std::vector<std::string>& i7_vals = i7_loader.vals_from_tree(i7_local, mm_i7);
-        const std::vector<std::string>& sbc_vals = sbc_loader.vals_from_tree(sbc_local, mm_sbc);
-        
+        const auto& i5_tuple = i5_loader.match_barcode(i5_local, mm_i5);
+        const auto& i7_tuple = i7_loader.match_barcode(i7_local, mm_i7);
+        const auto& sbc_tuple = sbc_loader.match_barcode(sbc_local, mm_sbc);
+        //const std::vector<std::string>& i5_vals = i5_loader.vals_from_tree(i5_local, mm_i5);
+        //const std::vector<std::string>& i7_vals = i7_loader.vals_from_tree(i7_local, mm_i7);
+        //const std::vector<std::string>& sbc_vals = sbc_loader.vals_from_tree(sbc_local, mm_sbc);
+        std::string i5_mt = std::get<0>(i5_tuple);
+        std::string i7_mt = std::get<0>(i7_tuple);
+        std::string sbc_mt = std::get<0>(sbc_tuple);
+
+       /*
         std::cout << "i7_local: " << i7_local << " i5_local: " << i5_local << 
             " stagger_local: " << stagger_local << " sbc_local: " << sbc_local << 
-            " i5_vals: " << vec_to_str(i5_vals) << " i7_vals: " << vec_to_str(i7_vals) << 
-            " sbc_vals: " << vec_to_str(sbc_vals) << "\n";
-        std::cout << "\n";
+            " i5_match_type: " << i5_mt << " i7_match_type: " << i7_mt  << 
+            " sbc_match_type: " << sbc_mt << "\n";
+        */
+        write_entry(i5_tuple, i7_tuple, sbc_tuple);
+        //std::cout << "\n";
 
        // Get the stagger sequence using i5
        
@@ -275,6 +299,7 @@ void concensus_mono::core_engine() {
         
         if (read_count % 1000000 == 0) {
             std::cout << "read_count: " << read_count << "\n";
+            std::cout << "count_map_size: " << count_map.size() << "\n";
         }
     }
     
