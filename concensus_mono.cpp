@@ -10,6 +10,7 @@
 #include <memory>
 #include <tuple>
 #include <map>
+#include <vector>
 
 #include "BKTree.h"
 #include "fastq_reader.hpp"
@@ -36,6 +37,8 @@ class concensus_mono {
         void load_barcodes();
         std::string vec_to_str(std::vector<std::string> my_vector);
         void write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple); 
+        std::string get_combined(std::string i5_val, std::string i7_val, std::string sbc_val);
+        void write_outfile(std::string outfile);
     private:
 		// Input variables pushed through command line
 		std::string i5_file_str;
@@ -179,6 +182,7 @@ bool concensus_mono::parse_args(int argc, char* argv[]) {
     std::cout << "Maximum allowed mismatches for i5 barcode is set to " << mm_i5 << ".\n";
     std::cout << "Maximum allowed mismatches for i7 barcode is set to " << mm_i7 << ".\n";
     std::cout << "Maximum allowed mismatches for sbc barcode is set to " << mm_sbc << ".\n";
+    return all_set;
 
 }
 
@@ -205,6 +209,20 @@ std::string concensus_mono::vec_to_str(std::vector<std::string> lvec) {
     
 }
 
+std::string concensus_mono::get_combined(std::string i5_val, std::string i7_val, 
+        std::string sbc_val) {
+    int i5_index = i5_loader.get_index(i5_val);
+    int i7_index = i7_loader.get_index(i7_val);
+    int sbc_index = sbc_loader.get_index(sbc_val);
+
+    std::string i5_str = std::to_string(i5_index);
+    std::string i7_str = std::to_string(i7_index);
+    std::string sbc_str = std::to_string(sbc_index);
+    
+    std::string combined_str = i5_str + "_" + i7_str + "_" + sbc_str;
+    return combined_str;    
+}
+
 void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple) {
     
     std::string i5_mt = std::get<0>(i5_tuple);
@@ -218,8 +236,40 @@ void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tupl
         std::string sbc_val = std::get<1>(sbc_tuple);
         std::string combined_str = i5_val + "_" + i7_val + "_" + sbc_val;
         //std::cout << "combined_str: " << combined_str << "\n";
+        //std::string combined_str = get_combined(i5_val, i7_val, sbc_val);
         count_map[combined_str] += 1;
+        
     }
+}
+
+
+void concensus_mono::write_outfile(std::string outfile) {
+    std::ofstream outf(outfile);
+    if (outf.is_open()) {
+        // Write header
+        outf << "i5_index" << "\t" << "i7_index" << "\t" << "sbc_index" << "\t" << "read_count" << "\n";
+        std::vector<std::string> i5_vec = i5_loader.get_bc_vector();
+        std::vector<std::string> i7_vec = i7_loader.get_bc_vector();
+        std::vector<std::string> sbc_vec = sbc_loader.get_bc_vector();
+
+        for (const auto& i5_ : i5_vec) {
+            for (const auto& i7_ : i7_vec) {
+                for (const auto& sbc_ : sbc_vec) {
+                    std::string combined_str = i5_ + "_" + i7_ + "_" + sbc_;
+                    long val = count_map[combined_str];
+                    std::string val_str = std::to_string(val);
+                    std::string out_str = i5_ + "\t" + i7_ + "\t" + sbc_ + "\t" + val_str;
+                    outf << out_str << "\n";   
+                }
+            }
+        } 
+
+        outf.close();
+    } else {
+        throw my_exception("Problem in opening the output file.\n");
+    }
+
+    
 }
 
 
@@ -297,11 +347,15 @@ void concensus_mono::core_engine() {
        
   
         
-        if (read_count % 1000000 == 0) {
+        if (read_count % 10000000 == 0) {
             std::cout << "read_count: " << read_count << "\n";
             std::cout << "count_map_size: " << count_map.size() << "\n";
+            break;
         }
     }
+    std::string outfile_str = outdirpath + "/" + prefix_str + "_outfile.txt";
+	
+    write_outfile(outfile_str);
     
 }
 

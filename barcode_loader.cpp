@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <tuple>
+#include <vector>
 
 #include <boost/regex.hpp>
 
@@ -23,7 +24,6 @@ class BCLoader {
 
         bool load_map();
         void save_tree(std::string save_file);
-        int get_index(std::string seq);
         void print_map();
         void print_index();
         bool load_tree();
@@ -31,6 +31,8 @@ class BCLoader {
         std::vector<std::string> vals_from_tree(std::string barcode, int mm);
         std::tuple<std::string, std::string, int> match_barcode(std::string barcode_str, int cutoff);
         int distance(std::string source, std::string target, bool remove_last = false);
+        int get_index(std::string lbc);
+        std::vector<std::string> get_bc_vector();
 
     private:
         bool hasHeader;
@@ -39,6 +41,7 @@ class BCLoader {
         std::unordered_map<std::string, int> seq_to_ind;
         std::string bc_file;
         BKTree<std::string> tree;
+        std::vector<std::string> bc_vec;
 
 };
 
@@ -135,6 +138,11 @@ std::tuple<std::string, std::string, int> BCLoader::match_barcode(std::string ba
     return match_obj;
 }
 
+int BCLoader::get_index(std::string lbc) {
+    int lindex = seq_to_ind[lbc];
+    return lindex;
+}
+
 std::string BCLoader::val_from_bc_map(std::string lbc) {
     std::string val = bc_map[lbc];
     return val;
@@ -161,6 +169,9 @@ bool BCLoader::load_tree() {
     return true;
 }
 
+std::vector<std::string> BCLoader::get_bc_vector() {
+    return bc_vec;
+}
 
 void BCLoader::save_tree(std::string outfile) {
     
@@ -171,10 +182,6 @@ void BCLoader::save_tree(std::string outfile) {
     return;
 }
 
-int BCLoader::get_index(std::string seq) {
-    int l_index = seq_to_ind[seq];
-    return l_index;
-}
 
 bool BCLoader::load_map() {
     std::ifstream words(bc_file);
@@ -200,6 +207,7 @@ bool BCLoader::load_map() {
                 std::string  bc_val = what[2];
                 bc_map[bc_name] = bc_val;
                 seq_to_ind[bc_val] = l_index; 
+                bc_vec.push_back(bc_val);
                 l_index++;
             } else {
                 throw my_exception("Problem in the parsing the barcode lines.\n");
