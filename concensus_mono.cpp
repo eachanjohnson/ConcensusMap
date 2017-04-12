@@ -26,7 +26,7 @@
 #include <unistd.h>
 
 namespace po = boost::program_options;
-typedef std::tuple<std::string, std::string, int> match_t;
+typedef std::tuple<std::string, std::string, int, std::string> match_t;
 
 class concensus_mono {
     public:
@@ -234,10 +234,19 @@ void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tupl
         std::string i5_val = std::get<1>(i5_tuple);
         std::string i7_val = std::get<1>(i7_tuple);
         std::string sbc_val = std::get<1>(sbc_tuple);
+        
+        std::string i5_read = std::get<3>(i5_tuple);
+        std::string i7_read = std::get<3>(i7_tuple);
+        std::string sbc_read = std::get<3>(sbc_tuple);
+
         std::string combined_str = i5_val + "_" + i7_val + "_" + sbc_val;
         //std::cout << "combined_str: " << combined_str << "\n";
         //std::string combined_str = get_combined(i5_val, i7_val, sbc_val);
         count_map[combined_str] += 1;
+        if (i5_val.compare("GGATATCT") == 0 && i7_val.compare("AAGATAGT") == 0 && sbc_val.compare("GATATGTCCCAATGCACCTA") == 0) {
+             std::cout << std::get<3>(i5_tuple) << " " << i5_mt << " "<< std::get<2>(i5_tuple) << " " << std::get<3>(i7_tuple) << " " << i7_mt << " " << std::get<2>(i7_tuple)  << " " << std::get<3>(sbc_tuple) << " " << sbc_mt << " " << std::get<2>(sbc_tuple) << "\n";
+       
+         }
         
     }
 }
@@ -324,9 +333,12 @@ void concensus_mono::core_engine() {
         int sbc_start = i5_len + stagger_len + gap_after_stagger;
         sbc_local = long_word2.substr(sbc_start, sbc_len);
 
-        const auto& i5_tuple = i5_loader.match_barcode(i5_local, mm_i5);
-        const auto& i7_tuple = i7_loader.match_barcode(i7_local, mm_i7);
-        const auto& sbc_tuple = sbc_loader.match_barcode(sbc_local, mm_sbc);
+        //const auto& i5_tuple = i5_loader.match_barcode(i5_local, mm_i5);
+        //const auto& i7_tuple = i7_loader.match_barcode(i7_local, mm_i7);
+        //const auto& sbc_tuple = sbc_loader.match_barcode(sbc_local, mm_sbc);
+        const auto& i5_tuple = i5_loader.match_barcode2(i5_local, mm_i5);
+        const auto& i7_tuple = i7_loader.match_barcode2(i7_local, mm_i7);
+        const auto& sbc_tuple = sbc_loader.match_barcode2(sbc_local, mm_sbc);
         //const std::vector<std::string>& i5_vals = i5_loader.vals_from_tree(i5_local, mm_i5);
         //const std::vector<std::string>& i7_vals = i7_loader.vals_from_tree(i7_local, mm_i7);
         //const std::vector<std::string>& sbc_vals = sbc_loader.vals_from_tree(sbc_local, mm_sbc);

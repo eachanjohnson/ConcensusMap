@@ -29,7 +29,8 @@ class BCLoader {
         bool load_tree();
         std::string val_from_bc_map(std::string lbc);
         std::vector<std::string> vals_from_tree(std::string barcode, int mm);
-        std::tuple<std::string, std::string, int> match_barcode(std::string barcode_str, int cutoff);
+        std::tuple<std::string, std::string, int, std::string> match_barcode(std::string barcode_str, int cutoff);
+        std::tuple<std::string, std::string, int, std::string> match_barcode2(std::string barcode_str, int cutoff);
         int distance(std::string source, std::string target, bool remove_last = false);
         int get_index(std::string lbc);
         std::vector<std::string> get_bc_vector();
@@ -77,8 +78,31 @@ int BCLoader::distance(std::string source, std::string target, bool remove_last)
     return ldist;
 }	
 
+std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode2(std::string barcode_str, int cutoff) {
 
-std::tuple<std::string, std::string, int> BCLoader::match_barcode(std::string barcode_str, int cutoff) {
+    std::vector<std::string> results;
+    std::string match_type = "no_match";
+    std::string final_barcode = "";
+    int smallest_dist = cutoff + 1;
+    
+    for (int j = 0; j <= cutoff; j++) {
+        results = tree.find(barcode_str, j);
+        if (results.size() == 1) {
+            match_type = "unique";
+            final_barcode = results[0];
+            smallest_dist = j;
+            break;
+        } else if (results.size() > 1) {
+            match_type = "ambiguous";
+            smallest_dist = j;
+            break;
+        }
+    }
+    auto match_obj = std::make_tuple(match_type, final_barcode, smallest_dist, barcode_str);
+    return match_obj;
+}
+
+std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode(std::string barcode_str, int cutoff) {
     
     std::vector<std::string> results;
 
@@ -134,7 +158,7 @@ std::tuple<std::string, std::string, int> BCLoader::match_barcode(std::string ba
     } else {
         match_type = "no_match";
     }
-    auto match_obj = std::make_tuple(match_type, final_barcode, smallest_dist);
+    auto match_obj = std::make_tuple(match_type, final_barcode, smallest_dist, barcode_str);
     return match_obj;
 }
 
