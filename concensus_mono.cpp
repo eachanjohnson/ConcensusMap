@@ -11,6 +11,8 @@
 #include <tuple>
 #include <map>
 #include <vector>
+#include <ctime>
+#include <iomanip>
 
 #include "BKTree.h"
 #include "fastq_reader.hpp"
@@ -39,6 +41,7 @@ class concensus_mono {
         void write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple); 
         std::string get_combined(std::string i5_val, std::string i7_val, std::string sbc_val);
         void write_outfile(std::string outfile);
+        unsigned int get_key_val(unsigned int i5_pos, unsigned int i7_pos, unsigned int sbc_pos);
     private:
 		// Input variables pushed through command line
 		std::string i5_file_str;
@@ -52,6 +55,11 @@ class concensus_mono {
 		int mm_i5;
 		int mm_i7;
 		int mm_sbc;
+        unsigned int i5_lim;
+        unsigned int i7_lim;
+        unsigned int sbc_lim;
+        unsigned int total_run;
+
         po::options_description desc;
 
         BCLoader i5_loader;
@@ -59,7 +67,8 @@ class concensus_mono {
         BCLoader sbc_loader;
         BCLoader stagger_loader;
         //std::unordered_map<std::string, long> count_map; 
-        std::map<std::string, long> count_map; 
+        //std::map<std::string, long> count_map; 
+        std::vector<int> count_map;
 
 };
 
@@ -71,28 +80,46 @@ void concensus_mono::print_help() {
         " -p <prefix_str> -o <outdir>\n\n";
 }
 
+
+unsigned int concensus_mono::get_key_val(unsigned int i5_pos, unsigned int i7_pos, unsigned int sbc_pos) {
+    unsigned int key_val = (( i5_pos * i7_lim ) + i7_pos )* sbc_lim + sbc_pos;
+    return key_val;
+}
+
 void concensus_mono::load_barcodes() {
     i5_loader = BCLoader(i5_file_str);
     i5_loader.load_map();
     i5_loader.load_tree();
     //i5_loader.print_map();
     //i5_loader.print_index();
+    i5_loader.print_rev_map();
+    i5_lim = i5_loader.get_bc_lim();
+    std::cout << "i5_lim: " << i5_lim << "\n";
 
     i7_loader = BCLoader(i7_file_str);
     i7_loader.load_map();
     i7_loader.load_tree();
     //i7_loader.print_map();
     //i7_loader.print_index();
+    i7_loader.print_rev_map();
+    i7_lim = i7_loader.get_bc_lim();
+    std::cout << "i7_lim: " << i7_lim << "\n";
 
     sbc_loader = BCLoader(sbc_file_str);
     sbc_loader.load_map();
     sbc_loader.load_tree();    
     //sbc_loader.print_map();
     //sbc_loader.print_index();
+    sbc_loader.print_rev_map();
+    sbc_lim = sbc_loader.get_bc_lim();
+    std::cout << "sbc_lim: " << sbc_lim << "\n";
 
     stagger_loader = BCLoader(stagger_file_str);
     stagger_loader.load_map();
     //stagger_loader.print_map();
+    unsigned int i5_bc_vec_size = i5_loader.get_bc_vec_size();
+    unsigned int count_map_size = i5_bc_vec_size * i7_lim * sbc_lim;
+    count_map = std::vector<int>(count_map_size);
 
 }
 
@@ -116,6 +143,7 @@ bool concensus_mono::parse_args(int argc, char* argv[]) {
 		("mm_i5", po::value(&mm_i5)->default_value(1), "Optional/Maximum allowed mismatches for i5 barcode.")
 		("mm_i7", po::value(&mm_i7)->default_value(1), "Optional/Maximum allowed mismatches for i7 barcode.")
 		("mm_sbc", po::value(&mm_sbc)->default_value(2), "Optional/Maximum allowed mismatches for sbc barcode.")
+        ("total_run", po::value(&total_run)->default_value(10000), "Optional/total reads to process.")
 	;
 
     po::variables_map vm;
@@ -242,15 +270,17 @@ void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tupl
         std::string combined_str = i5_val + "_" + i7_val + "_" + sbc_val;
         //std::cout << "combined_str: " << combined_str << "\n";
         //std::string combined_str = get_combined(i5_val, i7_val, sbc_val);
-        count_map[combined_str] += 1;
-        if (i5_val.compare("GGATATCT") == 0 && i7_val.compare("AAGATAGT") == 0 && sbc_val.compare("GATATGTCCCAATGCACCTA") == 0) {
-             std::cout << std::get<3>(i5_tuple) << " " << i5_mt << " "<< std::get<2>(i5_tuple) << " " << std::get<3>(i7_tuple) << " " << i7_mt << " " << std::get<2>(i7_tuple)  << " " << std::get<3>(sbc_tuple) << " " << sbc_mt << " " << std::get<2>(sbc_tuple) << "\n";
+        unsigned int i5_index = i5_loader.get_index(i5_val);
+        unsigned int i7_index = i7_loader.get_index(i7_val);
+        unsigned int sbc_index = sbc_loader.get_index(sbc_val);
+
+       unsigned long key_val = get_key_val(i5_index, i7_index, sbc_index);
+        
+        count_map[key_val] += 1;
        
-         }
         
     }
 }
-
 
 void concensus_mono::write_outfile(std::string outfile) {
     std::ofstream outf(outfile);
@@ -265,9 +295,18 @@ void concensus_mono::write_outfile(std::string outfile) {
             for (const auto& i7_ : i7_vec) {
                 for (const auto& sbc_ : sbc_vec) {
                     std::string combined_str = i5_ + "_" + i7_ + "_" + sbc_;
-                    long val = count_map[combined_str];
+                    unsigned int i5_index = i5_loader.get_index(i5_);
+                    unsigned int i7_index = i7_loader.get_index(i7_);
+                    unsigned int sbc_index = sbc_loader.get_index(sbc_);
+
+                    unsigned long key_val = get_key_val(i5_index, i7_index, sbc_index);
+
+                    long val = count_map[key_val];
                     std::string val_str = std::to_string(val);
-                    std::string out_str = i5_ + "\t" + i7_ + "\t" + sbc_ + "\t" + val_str;
+                    std::string i5_id = i5_loader.id_from_rev_map(i5_);
+                    std::string i7_id = i7_loader.id_from_rev_map(i7_);
+                    std::string sbc_id = sbc_loader.id_from_rev_map(sbc_);
+                    std::string out_str = i5_id + "\t" + i7_id + "\t" + sbc_id + "\t" + val_str;
                     outf << out_str << "\n";   
                 }
             }
@@ -280,7 +319,6 @@ void concensus_mono::write_outfile(std::string outfile) {
 
     
 }
-
 
 void concensus_mono::core_engine() {
 
@@ -312,6 +350,7 @@ void concensus_mono::core_engine() {
     fastq_reader short_file(short_read_str);
     fastq_reader long_file(long_read_str);
 
+
     long read_count = 0;
     while (short_file.getline(short_word1)) {
         if (!short_file.getline(short_word2)) { break; }
@@ -333,12 +372,9 @@ void concensus_mono::core_engine() {
         int sbc_start = i5_len + stagger_len + gap_after_stagger;
         sbc_local = long_word2.substr(sbc_start, sbc_len);
 
-        //const auto& i5_tuple = i5_loader.match_barcode(i5_local, mm_i5);
-        //const auto& i7_tuple = i7_loader.match_barcode(i7_local, mm_i7);
-        //const auto& sbc_tuple = sbc_loader.match_barcode(sbc_local, mm_sbc);
-        const auto& i5_tuple = i5_loader.match_barcode2(i5_local, mm_i5);
-        const auto& i7_tuple = i7_loader.match_barcode2(i7_local, mm_i7);
-        const auto& sbc_tuple = sbc_loader.match_barcode2(sbc_local, mm_sbc);
+        const auto& i5_tuple = i5_loader.match_barcode(i5_local, mm_i5);
+        const auto& i7_tuple = i7_loader.match_barcode(i7_local, mm_i7);
+        const auto& sbc_tuple = sbc_loader.match_barcode(sbc_local, mm_sbc);
         //const std::vector<std::string>& i5_vals = i5_loader.vals_from_tree(i5_local, mm_i5);
         //const std::vector<std::string>& i7_vals = i7_loader.vals_from_tree(i7_local, mm_i7);
         //const std::vector<std::string>& sbc_vals = sbc_loader.vals_from_tree(sbc_local, mm_sbc);
@@ -359,15 +395,23 @@ void concensus_mono::core_engine() {
        
   
         
-        if (read_count % 10000000 == 0) {
+        if (read_count % 1000 == 0) {
             std::cout << "read_count: " << read_count << "\n";
             std::cout << "count_map_size: " << count_map.size() << "\n";
-            break;
+            auto t = std::time(nullptr);
+			auto tm = *std::localtime(&t);
+
+		    std::ostringstream oss;
+		    oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+		    auto str = oss.str();
+
+		    std::cout << str << std::endl;
         }
+        if (read_count == total_run) {break;}
     }
     std::string outfile_str = outdirpath + "/" + prefix_str + "_outfile.txt";
 	
-    write_outfile(outfile_str);
+    //write_outfile(outfile_str);
     
 }
 

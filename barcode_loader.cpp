@@ -29,12 +29,15 @@ class BCLoader {
         bool load_tree();
         std::string val_from_bc_map(std::string lbc);
         std::vector<std::string> vals_from_tree(std::string barcode, int mm);
+        std::tuple<std::string, std::string, int, std::string> match_barcode_obs(std::string barcode_str, int cutoff);
         std::tuple<std::string, std::string, int, std::string> match_barcode(std::string barcode_str, int cutoff);
-        std::tuple<std::string, std::string, int, std::string> match_barcode2(std::string barcode_str, int cutoff);
         int distance(std::string source, std::string target, bool remove_last = false);
         int get_index(std::string lbc);
         std::vector<std::string> get_bc_vector();
-
+        std::string id_from_rev_map(std::string lbc_val);
+        void print_rev_map();
+        unsigned int get_bc_lim();
+        unsigned int get_bc_vec_size();
     private:
         bool hasHeader;
         std::unordered_map<std::string, std::string> bc_map;
@@ -45,6 +48,20 @@ class BCLoader {
         std::vector<std::string> bc_vec;
 
 };
+
+unsigned int BCLoader::get_bc_vec_size() {
+    return bc_vec.size();
+}
+
+unsigned int BCLoader::get_bc_lim() {
+    int bc_vec_size = bc_vec.size();
+    double val_log2 = log2(bc_vec_size);
+    double val_log2_ceil = ceil(val_log2);
+    double pow_val = pow(2.0, val_log2_ceil);
+    unsigned int retval = (unsigned int) pow_val;
+    return retval;
+}
+
 
 int BCLoader::distance(std::string source, std::string target, bool remove_last) {
 
@@ -78,7 +95,7 @@ int BCLoader::distance(std::string source, std::string target, bool remove_last)
     return ldist;
 }	
 
-std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode2(std::string barcode_str, int cutoff) {
+std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode(std::string barcode_str, int cutoff) {
 
     std::vector<std::string> results;
     std::string match_type = "no_match";
@@ -102,7 +119,7 @@ std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode2(
     return match_obj;
 }
 
-std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode(std::string barcode_str, int cutoff) {
+std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode_obs(std::string barcode_str, int cutoff) {
     
     std::vector<std::string> results;
 
@@ -172,6 +189,11 @@ std::string BCLoader::val_from_bc_map(std::string lbc) {
     return val;
 }
 
+std::string BCLoader::id_from_rev_map(std::string lbc_val) {
+    std::string lid = rev_bc_map[lbc_val];
+    return lid;
+}
+
 std::vector<std::string> BCLoader::vals_from_tree(std::string barcode, int mm) {
     std::vector<std::string> vals = tree.find(barcode, mm);
     return vals;
@@ -211,7 +233,7 @@ bool BCLoader::load_map() {
     std::ifstream words(bc_file);
 
     std::string lstr;
-    boost::regex expr ("(\\w+)\\s+(\\w*)");
+    boost::regex expr ("(\\S+)\\s+(\\S*)");
 
     boost::smatch what;
     if (!words.is_open()) {
@@ -230,6 +252,7 @@ bool BCLoader::load_map() {
                 std::string bc_name = what[1];
                 std::string  bc_val = what[2];
                 bc_map[bc_name] = bc_val;
+                rev_bc_map[bc_val] = bc_name;
                 seq_to_ind[bc_val] = l_index; 
                 bc_vec.push_back(bc_val);
                 l_index++;
@@ -256,6 +279,20 @@ void BCLoader::print_map() {
     
 }
 
+void BCLoader::print_rev_map() {
+     
+    std::cout << "Printing forward bc map for : " << bc_file << "\n";
+    std::cout << "------------------------------\n";
+    for (const auto& val_pair : rev_bc_map) {
+        auto & bc_val = val_pair.first;
+        auto & bc_name = val_pair.second;
+        int bc_len = bc_val.length();
+        std::cout << "val: " << bc_val << " barcode : "  << bc_name << " bc_len: " << bc_len << "\n";
+    
+    }
+    std::cout << "...............................\n";
+    
+}
 
 void BCLoader::print_index() {
     std::cout << "Printing bc index for : " << bc_file << "\n";
