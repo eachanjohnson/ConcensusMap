@@ -143,7 +143,7 @@ bool concensus_mono::parse_args(int argc, char* argv[]) {
 		("mm_i5", po::value(&mm_i5)->default_value(1), "Optional/Maximum allowed mismatches for i5 barcode.")
 		("mm_i7", po::value(&mm_i7)->default_value(1), "Optional/Maximum allowed mismatches for i7 barcode.")
 		("mm_sbc", po::value(&mm_sbc)->default_value(2), "Optional/Maximum allowed mismatches for sbc barcode.")
-        ("total_run", po::value(&total_run)->default_value(10000), "Optional/total reads to process.")
+        ("total_run", po::value(&total_run)->default_value(-1), "Optional/total reads to process.")
 	;
 
     po::variables_map vm;
@@ -395,7 +395,7 @@ void concensus_mono::core_engine() {
        
   
         
-        if (read_count % 1000 == 0) {
+        if (read_count % 1000000 == 0) {
             std::cout << "read_count: " << read_count << "\n";
             std::cout << "count_map_size: " << count_map.size() << "\n";
             auto t = std::time(nullptr);
@@ -411,7 +411,7 @@ void concensus_mono::core_engine() {
     }
     std::string outfile_str = outdirpath + "/" + prefix_str + "_outfile.txt";
 	
-    //write_outfile(outfile_str);
+    write_outfile(outfile_str);
     
 }
 
