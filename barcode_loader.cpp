@@ -29,7 +29,6 @@ class BCLoader {
         bool load_tree();
         std::string val_from_bc_map(std::string lbc);
         std::vector<std::string> vals_from_tree(std::string barcode, int mm);
-        std::tuple<std::string, std::string, int, std::string> match_barcode_obs(std::string barcode_str, int cutoff);
         std::tuple<std::string, std::string, int, std::string> match_barcode(std::string barcode_str, int cutoff);
         int distance(std::string source, std::string target, bool remove_last = false);
         int get_index(std::string lbc);
@@ -114,66 +113,6 @@ std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode(s
             smallest_dist = j;
             break;
         }
-    }
-    auto match_obj = std::make_tuple(match_type, final_barcode, smallest_dist, barcode_str);
-    return match_obj;
-}
-
-std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode_obs(std::string barcode_str, int cutoff) {
-    
-    std::vector<std::string> results;
-
-    results = tree.find(barcode_str, cutoff);
-
-    // calculate the minimum dIstance between the target and references
-
-    int smallest_dist = cutoff + 1;
-
-    // The smallest_barcode initialization could technically be anything
-    // since we overwrite this variable.
-
-    // Create something like JJJJJJJJ
-    std::string smallest_barcode = "";
-    for (int j = 0; j < barcode_str.length(); j++) {
-        smallest_barcode += "J";
-    }
-
-    std::vector<int> dist_vec;
-    for (auto const& val : results) {
-        int ldist = distance(val, barcode_str);
-        if (ldist < smallest_dist) {
-            smallest_dist = ldist;
-            smallest_barcode = val;
-        }
-
-        dist_vec.push_back(ldist);
-    }
-
-    int smallest_count = 0;
-    for (auto const& temp_dist : dist_vec) {
-        if (temp_dist == smallest_dist) {
-            smallest_count++;
-        }
-    }
-
-    //std::cout << "actual_barcode: " << barcode_str << 
-    //  ", smallest barcode: " <<  smallest_barcode <<  
-    //  ", sallest dist: " << smallest_dist << 
-    //  ", smallest_count: " << smallest_count << "\n";
-
-    // So the smallest dist has to be unique, otherwise we shall put 
-    //  them in a fil called unknow.
-
-    std::string final_barcode;
-    std::string match_type;
-
-    if (smallest_count == 1) {
-        match_type = "unique";
-        final_barcode = smallest_barcode;
-    } else if (smallest_count > 0) {
-        match_type = "ambiguous";
-    } else {
-        match_type = "no_match";
     }
     auto match_obj = std::make_tuple(match_type, final_barcode, smallest_dist, barcode_str);
     return match_obj;
