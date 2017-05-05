@@ -52,9 +52,9 @@ class MapLoader {
 
 
 int main() {
-    std::string lfile = "i5_plates.tsv" ;
+    std::string lfile = "i5_plates.csv" ;
 
-    std::string ldelim = "tab";
+    std::string ldelim = "comma";
     MapLoader mapl(lfile, ldelim);
     std::map<std::string, int> lmap = mapl.getMap<std::string, int>("i5_key", "i5_plate");
     for (auto val : lmap) {
