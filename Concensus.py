@@ -104,38 +104,11 @@ class Concensus:
             call(joblist_cmd.split())
  
 
-    def map_lane(self, lane, count_file):
-        print("lane: " + lane + " count_file: " + count_file)
-        # 
-
-      
-    def combine_lanes(self, prefix_set):
-        """ Get the names of the files in the specific orders """
-        confd = self.confd
-        Count_dir = confd.Count_dir
-        ldelim =  confd.ldelim
-
-        prefix_dict = dict()
-        reg_str = "_\\S+"
-        for lprefix in prefix_set:
-            lseq = re.sub(reg_str, '', lprefix)
-            prefix_dict[lseq] = lprefix
-        od = collections.OrderedDict(sorted(prefix_dict.items()))
-        
-        for lseq, lprefix in od.iteritems():
-            # Get the complete file
-            count_file = Count_dir + ldelim + lprefix + "_outfile.txt"
-            self.map_lane(lseq, count_file)
-            
-            
-        
-    
   
     def mainFunc(self):
         """ """
         prefix_set = self.get_prefix_set_paired()
         self.build_core_jobs(prefix_set)
-        self.combine_lanes(prefix_set)
             
                
 

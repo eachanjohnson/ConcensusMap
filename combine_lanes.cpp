@@ -6,6 +6,7 @@
 
 #include <boost/regex.hpp>
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "map_loader.hpp"
 
@@ -20,7 +21,7 @@ class combine_lanes {
         void print_help();
         void get_count_file_map();
         void join_lanes();
-        std::vector<std::string> split(const std::string &s, char delim); 
+        std::vector<std::string> split(const std::string& s, const std::string& delim); 
         std::string get_mapped_str(std::string key_str);
         void load_maps();
         template <typename T1, typename T2>
@@ -44,8 +45,6 @@ class combine_lanes {
         std::string comp_map_str;
         po::options_description desc;
         std::map<int, std::string> count_file_map;
-        template<typename Out>
-          void split(const std::string &s, char delim, Out result);
 
         std::map<std::string, int> i5_key_to_plate;
         std::map<std::string, int> i5_key_to_quadrant;
@@ -109,7 +108,7 @@ std::vector<std::string> combine_lanes::combine_vectors
     std::vector<std::string> vec2_sv = change_to_string<T2>(vec2);
 
     std::vector<std::string> comb_vec;
-    for (size_t j = 0; j < vec1.size(); j++) {
+    for (size_t j = 0; j < vec1_sv.size(); j++) {
         std::string var1 = vec1_sv[j];
         std::string var2 = vec2_sv[j];
         std::string final_var = var1 + delim + var2;
@@ -180,28 +179,15 @@ void combine_lanes::get_count_file_map() {
     }
 }
 
-// Obtained from http://stackoverflow.com/questions/236129/split-a-string-in-c
-template<typename Out>
-void combine_lanes::split(const std::string &s, char delim, Out result) {
-    std::stringstream ss;
-    ss.str(s);
-    std::string item;
-    while (std::getline(ss, item, delim)) {
-        *(result++) = item;
-    }
-}
-
-
-// Obtained from http://stackoverflow.com/questions/236129/split-a-string-in-c
-std::vector<std::string> combine_lanes::split(const std::string &s, char delim) {
-    std::vector<std::string> elems;
-    split(s, delim, std::back_inserter(elems));
-    return elems;
+std::vector<std::string> combine_lanes::split(const std::string& s, const std::string& delim) {
+    std::vector<std::string> strs;
+    boost::split(strs, s, boost::is_any_of(delim));
+    return strs;
 }
 
 std::string combine_lanes::get_mapped_str(std::string key_str) {
     std::string mapped_str;
-    char tab_delim = '\t';
+    std::string tab_delim = "\t";
     std::vector<std::string> parts = split(key_str, tab_delim);
     std::string lane_str = parts[0];
     int lane = std::stoi(lane_str); 
