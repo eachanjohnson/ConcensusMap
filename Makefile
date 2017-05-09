@@ -13,7 +13,7 @@ STXXLLIBS=${LOCALPATH}/lib/libstxxl.a
 all: tools
     
 tools:
-	#$(CC) $(CFLAGS) $(INC) concensus_mono.cpp -o concensus_mono $(BOOSTLIBS) $(PROG_OPT_LIB)
+	$(CC) $(CFLAGS) $(INC) concensus_mono.cpp -o concensus_mono $(BOOSTLIBS) $(PROG_OPT_LIB)
 	$(CC) $(CFLAGS) $(INC) combine_lanes.cpp -o combine_lanes $(BOOSTLIBS) $(PROG_OPT_LIB) -lstdc++fs
 	#$(CC) $(CFLAGS) $(INC) thrash.cpp -o thrash $(BOOSTLIBS) $(PROG_OPT_LIB)
 	#$(CC) $(CFLAGS) $(INC) dict_builder.cpp -o dict_builder $(BOOSTLIBS) $(PROG_OPT_LIB)

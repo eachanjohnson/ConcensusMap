@@ -1,3 +1,5 @@
+#ifndef _BARCODE_LOADER_HPP
+#define _BARCODE_LOADER_HPP
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -35,8 +37,6 @@ class BCLoader {
         std::vector<std::string> get_bc_vector();
         std::string id_from_rev_map(std::string lbc_val);
         void print_rev_map();
-        unsigned int get_bc_lim();
-        unsigned int get_bc_vec_size();
     private:
         bool hasHeader;
         std::unordered_map<std::string, std::string> bc_map;
@@ -47,19 +47,6 @@ class BCLoader {
         std::vector<std::string> bc_vec;
 
 };
-
-unsigned int BCLoader::get_bc_vec_size() {
-    return bc_vec.size();
-}
-
-unsigned int BCLoader::get_bc_lim() {
-    int bc_vec_size = bc_vec.size();
-    double val_log2 = log2(bc_vec_size);
-    double val_log2_ceil = ceil(val_log2);
-    double pow_val = pow(2.0, val_log2_ceil);
-    unsigned int retval = (unsigned int) pow_val;
-    return retval;
-}
 
 
 int BCLoader::distance(std::string source, std::string target, bool remove_last) {
@@ -246,31 +233,5 @@ void BCLoader::print_index() {
 
 }
 
-/*
-int main(int argc, char* argv[]) {
-    std::string i5_to_stagger_file = argv[1];
-
-    std::cout << "args count: " << argc << "\n";
-
-    bool hasHeader = true;
-    if (argc == 3) {
-        std::string sec_argv(argv[2]); 
-        if (!sec_argv.compare("no")) {
-            hasHeader = false;
-        } else if (sec_argv.compare("yes")) {
-            hasHeader = true;
-        }
-    }
-
-    std::string outfile(argv[3]);
-
-    std::cout << "hasHeader: " << hasHeader << "\n";
-    BCLoader bc_loader = BCLoader(i5_to_stagger_file, hasHeader);
-    bc_loader.load_map();
-    bc_loader.load_tree();
-    bc_loader.save_tree(outfile);
-}
-
-*/
-
+#endif
 
