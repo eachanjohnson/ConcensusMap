@@ -42,6 +42,9 @@ class ConfDict(object):
         self.sbc_barcodes_file = mydict['sbc_barcodes_file']
         self.p5_to_stagger_file = mydict['p5_to_stagger_file']
         self.UGER_cbp = mydict['UGER_cbp']
+        self.i5_plates_file = mydict['i5_plates_file']
+        self.i7_plates_file = mydict['i7_plates_file']
+        self.strains_map_file = mydict['strains_map_file']
 
 
     def storeConfigFromOptions(self):
@@ -110,6 +113,7 @@ class ConfDict(object):
         UGER_cbp_dir = Out_dir + ldelim + "UGER_cbp"
         Log_dir = Out_dir + ldelim + "logdir"
         Count_dir = Out_dir + ldelim + "countdir"
+        Summary_dir = Out_dir + ldelim + "summarydir"
         
         if use_qsub and os.path.exists(UGER_cbp_dir):
             shutil.rmtree(UGER_cbp_dir)
@@ -119,6 +123,9 @@ class ConfDict(object):
             os.makedirs(Log_dir)
         if not os.path.exists(Count_dir):
             os.makedirs(Count_dir)
+        if not os.path.exists(Summary_dir):
+            os.makedirs(Summary_dir)
+
         self.UGER_cbp_dir = UGER_cbp_dir
         self.Log_dir = Log_dir
         self.Count_dir = Count_dir

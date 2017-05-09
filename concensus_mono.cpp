@@ -326,6 +326,8 @@ void concensus_mono::core_engine() {
     // in the future
     int i7_len = 8;
     int i5_len = 8;
+    // This gap corresponds to PCR primer (whose length is
+    // 18, ATCTTGTGGAAAGGACGA)
     int gap_after_stagger = 18;
     int sbc_len = 20;
 

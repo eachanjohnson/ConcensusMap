@@ -1,6 +1,6 @@
 # compiler to use
 CC = c++
-CFLAGS=-O3 -std=c++14
+CFLAGS=-O3 -std=c++14 
 OFLAGS=-lpthread -fopenmp
 
 LOCALPATH=/broad/IDP-Dx_work/nirmalya/local
@@ -13,7 +13,9 @@ STXXLLIBS=${LOCALPATH}/lib/libstxxl.a
 all: tools
     
 tools:
-	$(CC) $(CFLAGS) $(INC) concensus_mono.cpp -o concensus $(BOOSTLIBS) $(PROG_OPT_LIB)
+	#$(CC) $(CFLAGS) $(INC) concensus_mono.cpp -o concensus_mono $(BOOSTLIBS) $(PROG_OPT_LIB)
+	$(CC) $(CFLAGS) $(INC) combine_lanes.cpp -o combine_lanes $(BOOSTLIBS) $(PROG_OPT_LIB) -lstdc++fs
+	#$(CC) $(CFLAGS) $(INC) thrash.cpp -o thrash $(BOOSTLIBS) $(PROG_OPT_LIB)
 	#$(CC) $(CFLAGS) $(INC) dict_builder.cpp -o dict_builder $(BOOSTLIBS) $(PROG_OPT_LIB)
 	#$(CC) $(CFLAGS) $(INC) index_splitter.cpp -o index_splitter $(BOOSTLIBS) $(PROG_OPT_LIB)
 	#$(CC) $(CFLAGS) $(INC) dict_builder_test.cpp -o dict_builder_test $(BOOSTLIBS) $(PROG_OPT_LIB)
