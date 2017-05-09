@@ -9,6 +9,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "map_loader.hpp"
+#include "my_exception.h"
 
 namespace po = boost::program_options;
 namespace fs = std::experimental::filesystem;
@@ -34,7 +35,10 @@ class combine_lanes {
         template <typename T1, typename T2>
             void print_map(std::map<T1, T2> lmap);
         void print_some_maps();
-
+        bool has_suffix(const std::string &str, const std::string &suffix);
+        std::string get_suf_delim (std::string filename);
+        std::string get_outstring(std::vector<std::string> lvec);
+        std::string get_out_header();
     private:
         std::string i5_plates_str;
         std::string i7_plates_str;
@@ -51,8 +55,28 @@ class combine_lanes {
         std::map<std::string, std::string> i7_map;
         std::map<std::string, std::string> plate_bcs_map;
         std::map<std::string, std::string> compound_map;
+        std::map<std::string, std::string> tag_to_gene;
 
 };
+
+std::string combine_lanes::get_suf_delim (std::string filename) {
+    std::string ldelim;
+    if (has_suffix(filename, ".tsv")) {
+        ldelim = "tab";
+    } else if (has_suffix(filename, ".csv")) {
+        ldelim = "comma";
+    } else {
+        throw my_exception("Problem in determine the delimiter of the file: " + filename);
+    }
+    return ldelim;
+}
+
+// Obtained from http://stackoverflow.com/questions/20446201/how-to-check-if-string-ends-with-txt
+bool combine_lanes::has_suffix(const std::string &str, const std::string &suffix)
+{
+    return str.size() >= suffix.size() &&
+           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
 
 template <typename T1, typename T2>
 void combine_lanes::print_map(std::map<T1, T2> lmap) {
@@ -128,12 +152,14 @@ std::map<std::string, std::string> combine_lanes::make_map(std::vector<std::stri
 
 void combine_lanes::load_maps() {
 
-    std::string ldelim = "tab";
-    MapLoader i5_plates_map(i5_plates_str, ldelim);
+    std::string cdelim;
+    cdelim = get_suf_delim(i5_plates_str);
+    MapLoader i5_plates_map(i5_plates_str, cdelim);
     i5_key_to_plate = i5_plates_map.getMap<std::string, int>("i5_key", "i5_plate");
     i5_key_to_quadrant = i5_plates_map.getMap<std::string, int>("i5_key", "quadrant");
 
-    MapLoader i7_plates_map(i7_plates_str, ldelim);
+    cdelim = get_suf_delim(i7_plates_str);
+    MapLoader i7_plates_map(i7_plates_str, cdelim);
     std::vector<std::string> i7_key = i7_plates_map.getColumn<std::string>("i7_key");
     std::vector<int> i7_quadrant = i7_plates_map.getColumn<int>("quadrant");
     std::vector<std::string> i7_row = i7_plates_map.getColumn<std::string>("row");
@@ -142,7 +168,7 @@ void combine_lanes::load_maps() {
     std::vector<std::string> i7_row_column = combine_vectors<std::string, int>(i7_row, i7_column, "");
     i7_map = make_map(i7_key_quadrant, i7_row_column);    
 
-    std::string cdelim = "comma";
+    cdelim = get_suf_delim(plate_bcs_str);
     MapLoader plate_bcs(plate_bcs_str, cdelim);
     std::vector<std::string> plate_name = plate_bcs.getColumn<std::string>("plate_name");
     std::vector<int> primer_plate = plate_bcs.getColumn<int>("primer_plate");
@@ -151,7 +177,7 @@ void combine_lanes::load_maps() {
     plate_bcs_map = make_map(primer_plate_pool, plate_name);
 
 
-
+    cdelim = get_suf_delim(comp_map_str);
     MapLoader comp_map(comp_map_str, cdelim);
     std::vector<std::string> Plate_Barcode = comp_map.getColumn<std::string>("Plate_Barcode");
     std::vector<std::string> Well_Position = comp_map.getColumn<std::string>("Well_Position");
@@ -165,7 +191,11 @@ void combine_lanes::load_maps() {
     std::vector<std::string> temp2 = combine_vectors<std::string, std::string>(temp1, mmoles_per_liter, tab_str);
     compound_map = make_map(Plate_Barcode_Well_Position, temp2);
 
-   
+    cdelim = get_suf_delim(strains_map_str);
+    MapLoader strains_map(strains_map_str, cdelim);
+    tag_to_gene = strains_map.getMap<std::string, std::string>("tag", "Gene");
+       
+    
 }
 
 void combine_lanes::get_count_file_map() {
@@ -185,8 +215,45 @@ std::vector<std::string> combine_lanes::split(const std::string& s, const std::s
     return strs;
 }
 
+std::string combine_lanes::get_outstring(std::vector<std::string> lvec) {
+    std::string lout;
+    for (int j = 0; j < lvec.size(); j++) {
+        if (j == 0) {
+            lout = lvec[j];
+        } else {
+            lout += "\t" + lvec[j];
+        }
+    }
+    return lout;
+}
+
+// This is a bit hardcoded due to time constraint.
+// Should be updated with something more systematic
+//in the future.
+
+std::string combine_lanes::get_out_header() {
+    std::vector<std::string> header_vec;
+    header_vec.push_back("lane");
+    header_vec.push_back("i5_id");
+    header_vec.push_back("i5_plate");
+    header_vec.push_back("plate_barcode");
+    header_vec.push_back("i7_id");
+    header_vec.push_back("plate_quadrant");
+    header_vec.push_back("well_pos");
+    header_vec.push_back("Broad_Sample");
+    header_vec.push_back("mg_per_ml");
+    header_vec.push_back("mmoles_per_liter");
+    header_vec.push_back("strain_id");
+    header_vec.push_back("strain_gene");
+    header_vec.push_back("count_unique");
+    header_vec.push_back("count_mixed");
+    header_vec.push_back("count_all");
+    std::string header_str = get_outstring(header_vec);
+    return header_str;
+
+}
+
 std::string combine_lanes::get_mapped_str(std::string key_str) {
-    std::string mapped_str;
     std::string tab_delim = "\t";
     std::vector<std::string> parts = split(key_str, tab_delim);
     std::string lane_str = parts[0];
@@ -194,13 +261,16 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
     std::string i5_id = parts[1];
     std::string i7_id = parts[2];
     std::string sbc_id = parts[3];
+    
     std::string count_str = parts[4];
+    std::string count_mixed_str = parts[5]; 
+    std::string count_all_str = parts[6];
     int i5_plate = i5_key_to_plate[i5_id];
     int i5_quadrant = i5_key_to_quadrant[i5_id];
     std::string plate_pool = std::to_string(i5_plate) + "_" + lane_str;
     std::string plate_barcode = plate_bcs_map[plate_pool];
     //std::cout << "plate_pool: " << plate_pool << "\n";
-    std::cout << "plate_barcode: " << plate_barcode << "\n";
+    //std::cout << "plate_barcode: " << plate_barcode << "\n";
     std::string i7_key_quadrant = i7_id + "_" + std::to_string(i5_quadrant);
     //std::cout << "i7_key_quadrant: " << i7_key_quadrant << "\n";
     std::string row_column = i7_map[i7_key_quadrant];
@@ -208,9 +278,25 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
     std::string barcode_wellpos = plate_barcode + "_" + row_column;
     std::string compound_info = compound_map[barcode_wellpos]; 
     //std::cout << "compound_info: " << compound_info << "\n";
+    std::string sbc_gene = tag_to_gene[sbc_id]; 
+
+    std::vector<std::string> out_vec;
+    out_vec.push_back(lane_str);
+    out_vec.push_back(i5_id);
+    out_vec.push_back(std::to_string(i5_plate));
+    out_vec.push_back(plate_barcode);
+    out_vec.push_back(i7_id);
+    out_vec.push_back(std::to_string(i5_quadrant));
+    out_vec.push_back(row_column);
+    out_vec.push_back(compound_info);
+    out_vec.push_back(sbc_id);
+    out_vec.push_back(sbc_gene);
+    out_vec.push_back(count_str);
+    out_vec.push_back(count_mixed_str);
+    out_vec.push_back(count_all_str);
+   
+    std::string mapped_str = get_outstring(out_vec); 
     
-    mapped_str = key_str + "\t" + std::to_string(i5_plate) + "\t" + std::to_string(i5_quadrant) + "\t" +
-        plate_barcode + "\t" + row_column + "\t" + compound_info;
     return mapped_str;
 }
 
@@ -218,7 +304,8 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
 void combine_lanes::join_lanes() {
 
     std::ofstream summary_file(summary_file_str);
-
+    std::string header_str = get_out_header();
+    summary_file << header_str << "\n";
     for (const auto& e : count_file_map) {
         int lane = e.first;
         std::string lfile_str = e.second;
@@ -249,7 +336,8 @@ void combine_lanes::join_lanes() {
 void combine_lanes::print_help() {
     std::cout << desc << "\n";
     std::cout << "Usage: combine_lanes --i5_plates <i5 plates> --i7_plates <i7 plates> "
-        "--strains_map <strains map> --count_dir <count dir> --summary_file <summary_file>\n\n";
+        "--plate_bcs <plate_bcs> --comp_map <comp_map> --strains_map <strains map> "
+        "--count_dir <count dir> --summary_file <summary_file>\n\n";
 }
 
 bool combine_lanes::parse_args(int argc, char* argv[]) {
