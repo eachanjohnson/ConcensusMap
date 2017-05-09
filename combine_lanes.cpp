@@ -56,6 +56,7 @@ class combine_lanes {
         std::map<std::string, std::string> plate_bcs_map;
         std::map<std::string, std::string> compound_map;
         std::map<std::string, std::string> tag_to_gene;
+        std::string out_delim = ",";
 
 };
 
@@ -187,8 +188,8 @@ void combine_lanes::load_maps() {
 
     std::vector<std::string> Plate_Barcode_Well_Position = combine_vectors<std::string, std::string>(Plate_Barcode, Well_Position, "_");
     std::string tab_str = "\t";
-    std::vector<std::string> temp1 = combine_vectors<std::string, std::string>(Broad_Sample, mg_per_ml, tab_str);
-    std::vector<std::string> temp2 = combine_vectors<std::string, std::string>(temp1, mmoles_per_liter, tab_str);
+    std::vector<std::string> temp1 = combine_vectors<std::string, std::string>(Broad_Sample, mg_per_ml, out_delim);
+    std::vector<std::string> temp2 = combine_vectors<std::string, std::string>(temp1, mmoles_per_liter, out_delim);
     compound_map = make_map(Plate_Barcode_Well_Position, temp2);
 
     cdelim = get_suf_delim(strains_map_str);
@@ -221,7 +222,7 @@ std::string combine_lanes::get_outstring(std::vector<std::string> lvec) {
         if (j == 0) {
             lout = lvec[j];
         } else {
-            lout += "\t" + lvec[j];
+            lout += out_delim + lvec[j];
         }
     }
     return lout;
@@ -276,7 +277,14 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
     std::string row_column = i7_map[i7_key_quadrant];
     //std::cout << "row_column: " << row_column << "\n";
     std::string barcode_wellpos = plate_barcode + "_" + row_column;
-    std::string compound_info = compound_map[barcode_wellpos]; 
+    std::string compound_info;
+    if (compound_map.find(barcode_wellpos) == compound_map.end()) {
+        // not found; so padded with two commas
+        compound_info = out_delim + out_delim;
+    } else {
+        // found
+        compound_info = compound_map[barcode_wellpos]; 
+    }
     //std::cout << "compound_info: " << compound_info << "\n";
     std::string sbc_gene = tag_to_gene[sbc_id]; 
 
