@@ -40,7 +40,6 @@ class concensus_mono {
         void load_barcodes();
         std::string vec_to_str(std::vector<std::string> my_vector);
         void write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple); 
-        std::string get_combined(std::string i5_val, std::string i7_val, std::string sbc_val);
         void write_outfile(std::string outfile);
         std::string get_key_val(unsigned int i5_pos, unsigned int i7_pos, unsigned int sbc_pos);
     private:
@@ -98,30 +97,28 @@ void concensus_mono::load_barcodes() {
     i5_loader.load_map();
     i5_loader.load_tree();
     i5_loader.print_map();
-    i5_loader.print_index();
-    i5_loader.print_rev_map();
+    i5_loader.print_name_to_index();
+    i5_loader.print_seq_to_index();
 
     i7_loader = BCLoader(i7_file_str);
     i7_loader.load_map();
     i7_loader.load_tree();
     i7_loader.print_map();
-    i7_loader.print_index();
-    i7_loader.print_rev_map();
+    i7_loader.print_name_to_index();
+    i7_loader.print_seq_to_index();
 
     sbc_loader = BCLoader(sbc_file_str);
     sbc_loader.load_map();
     sbc_loader.load_tree();    
     sbc_loader.print_map();
-    sbc_loader.print_index();
-    sbc_loader.print_rev_map();
+    sbc_loader.print_name_to_index();
+    sbc_loader.print_seq_to_index();
 
     stagger_loader = BCLoader(stagger_file_str);
     stagger_loader.load_map();
     stagger_loader.print_map();
 
 }
-
-
 
 bool concensus_mono::parse_args(int argc, char* argv[]) {
     
@@ -235,20 +232,6 @@ std::string concensus_mono::vec_to_str(std::vector<std::string> lvec) {
     
 }
 
-std::string concensus_mono::get_combined(std::string i5_val, std::string i7_val, 
-        std::string sbc_val) {
-    int i5_index = i5_loader.get_index(i5_val);
-    int i7_index = i7_loader.get_index(i7_val);
-    int sbc_index = sbc_loader.get_index(sbc_val);
-
-    std::string i5_str = std::to_string(i5_index);
-    std::string i7_str = std::to_string(i7_index);
-    std::string sbc_str = std::to_string(sbc_index);
-    
-    std::string combined_str = i5_str + "_" + i7_str + "_" + sbc_str;
-    return combined_str;    
-}
-
 void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple) {
 
     std::string no_match_str = "no_match";
@@ -280,9 +263,9 @@ void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tupl
         std::string i7_val = std::get<1>(i7_tuple);
         std::string sbc_val = std::get<1>(sbc_tuple);
 
-        unsigned int i5_index = i5_loader.get_index(i5_val);
-        unsigned int i7_index = i7_loader.get_index(i7_val);
-        unsigned int sbc_index = sbc_loader.get_index(sbc_val);
+        unsigned int i5_index = i5_loader.get_seq_to_index(i5_val);
+        unsigned int i7_index = i7_loader.get_seq_to_index(i7_val);
+        unsigned int sbc_index = sbc_loader.get_seq_to_index(sbc_val);
 
         // None of the index should be zero
         assert(i5_index > 0);
@@ -325,16 +308,16 @@ void concensus_mono::write_outfile(std::string outfile) {
         outf << "i5_index" << "\t" << "i7_index" << "\t" << "sbc_index" 
              << "\t" << "read_count_exact" << "\t" << "read_count_nonexact" 
              << "\t" << "read_count_all" << "\n";
-        std::vector<std::string> i5_vec = i5_loader.get_bc_vector();
-        std::vector<std::string> i7_vec = i7_loader.get_bc_vector();
-        std::vector<std::string> sbc_vec = sbc_loader.get_bc_vector();
+        std::vector<std::string> i5_vec = i5_loader.get_name_vector();
+        std::vector<std::string> i7_vec = i7_loader.get_name_vector();
+        std::vector<std::string> sbc_vec = sbc_loader.get_name_vector();
 
         for (const auto& i5_ : i5_vec) {
             for (const auto& i7_ : i7_vec) {
                 for (const auto& sbc_ : sbc_vec) {
-                    unsigned int i5_index = i5_loader.get_index(i5_);
-                    unsigned int i7_index = i7_loader.get_index(i7_);
-                    unsigned int sbc_index = sbc_loader.get_index(sbc_);
+                    unsigned int i5_index = i5_loader.get_name_to_index(i5_);
+                    unsigned int i7_index = i7_loader.get_name_to_index(i7_);
+                    unsigned int sbc_index = sbc_loader.get_name_to_index(sbc_);
 
                     std::string key_val = get_key_val(i5_index, i7_index, sbc_index);
 
@@ -345,10 +328,7 @@ void concensus_mono::write_outfile(std::string outfile) {
                     std::string val_nonexact_str = std::to_string(val_nonexact);
                     std::string val_all_str = std::to_string(val_all);
 
-                    std::string i5_id = i5_loader.id_from_rev_map(i5_);
-                    std::string i7_id = i7_loader.id_from_rev_map(i7_);
-                    std::string sbc_id = sbc_loader.id_from_rev_map(sbc_);
-                    std::string out_str = i5_id + "\t" + i7_id + "\t" + sbc_id + "\t" + val_exact_str + "\t" + val_nonexact_str + "\t" + val_all_str;
+                    std::string out_str = i5_ + "\t" + i7_ + "\t" + sbc_ + "\t" + val_exact_str + "\t" + val_nonexact_str + "\t" + val_all_str;
                     outf << out_str << "\n";   
                 }
             }

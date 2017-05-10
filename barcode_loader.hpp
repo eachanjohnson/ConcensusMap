@@ -11,6 +11,7 @@
 
 #include "my_exception.h"
 #include "BKTree.h"
+#include "utils.hpp"
 
 class BCLoader {
 
@@ -27,24 +28,24 @@ class BCLoader {
         bool load_map();
         void save_tree(std::string save_file);
         void print_map();
-        void print_index();
+        void print_name_to_index();
+        void print_seq_to_index();
         bool load_tree();
         std::string val_from_bc_map(std::string lbc);
         std::vector<std::string> vals_from_tree(std::string barcode, int mm);
         std::tuple<std::string, std::string, int, std::string> match_barcode(std::string barcode_str, int cutoff);
         int distance(std::string source, std::string target, bool remove_last = false);
-        int get_index(std::string lbc);
-        std::vector<std::string> get_bc_vector();
-        std::string id_from_rev_map(std::string lbc_val);
-        void print_rev_map();
+        int get_name_to_index(std::string lname);
+        int get_seq_to_index(std::string lseq);
+        std::vector<std::string> get_name_vector();
     private:
         bool hasHeader;
         std::unordered_map<std::string, std::string> bc_map;
-        std::unordered_map<std::string, std::string> rev_bc_map;
         std::unordered_map<std::string, int> seq_to_ind;
+        std::unordered_map<std::string, int> name_to_ind;
         std::string bc_file;
         BKTree<std::string> tree;
-        std::vector<std::string> bc_vec;
+        std::vector<std::string> name_vec;
 
 };
 
@@ -105,7 +106,7 @@ std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode(s
     return match_obj;
 }
 
-int BCLoader::get_index(std::string lbc) {
+int BCLoader::get_seq_to_index(std::string lbc) {
             
     int lindex = seq_to_ind[lbc];
     if (lindex == 0) {
@@ -118,15 +119,22 @@ int BCLoader::get_index(std::string lbc) {
     
 }
 
+int BCLoader::get_name_to_index(std::string lname) {
+    int lindex = name_to_ind[lname];
+    if (lindex == 0) {
+        // The valid value for a barcode will always be positive
+        std::string mystr = "Probably illegal barcode name: " + lname;
+        throw my_exception(mystr);
+    }
+   
+    return lindex;
+}
+
 std::string BCLoader::val_from_bc_map(std::string lbc) {
     std::string val = bc_map[lbc];
     return val;
 }
 
-std::string BCLoader::id_from_rev_map(std::string lbc_val) {
-    std::string lid = rev_bc_map[lbc_val];
-    return lid;
-}
 
 std::vector<std::string> BCLoader::vals_from_tree(std::string barcode, int mm) {
     std::vector<std::string> vals = tree.find(barcode, mm);
@@ -149,8 +157,8 @@ bool BCLoader::load_tree() {
     return true;
 }
 
-std::vector<std::string> BCLoader::get_bc_vector() {
-    return bc_vec;
+std::vector<std::string> BCLoader::get_name_vector() {
+    return name_vec;
 }
 
 void BCLoader::save_tree(std::string outfile) {
@@ -186,11 +194,11 @@ bool BCLoader::load_map() {
             bool res = boost::regex_search(lstr, what, expr);
             if (res) {
                 std::string bc_name = what[1];
-                std::string  bc_val = what[2];
-                bc_map[bc_name] = bc_val;
-                rev_bc_map[bc_val] = bc_name;
-                seq_to_ind[bc_val] = l_index; 
-                bc_vec.push_back(bc_val);
+                std::string  bc_seq = what[2];
+                bc_map[bc_name] = bc_seq;
+                seq_to_ind[bc_seq] = l_index; 
+                name_to_ind[bc_name] = l_index;
+                name_vec.push_back(bc_name);
                 l_index++;
             } else {
                 throw my_exception("Problem in the parsing the barcode lines.\n");
@@ -204,41 +212,22 @@ void BCLoader::print_map() {
      
     std::cout << "Printing forward bc map for : " << bc_file << "\n";
     std::cout << "------------------------------\n";
-    for (const auto& val_pair : bc_map) {
-        auto & bc_name = val_pair.first;
-        auto & bc_val = val_pair.second;
-        int bc_len = bc_val.length();
-        std::cout << "barcode: " << bc_name << " val : "  << bc_val << " bc_len: " << bc_len << "\n";
-    
-    }
+    UtilC::print_map(bc_map);
     std::cout << "...............................\n";
-    
 }
 
-void BCLoader::print_rev_map() {
-     
-    std::cout << "Printing forward bc map for : " << bc_file << "\n";
-    std::cout << "------------------------------\n";
-    for (const auto& val_pair : rev_bc_map) {
-        auto & bc_val = val_pair.first;
-        auto & bc_name = val_pair.second;
-        int bc_len = bc_val.length();
-        std::cout << "val: " << bc_val << " barcode : "  << bc_name << " bc_len: " << bc_len << "\n";
-    
-    }
-    std::cout << "...............................\n";
-    
-}
-
-void BCLoader::print_index() {
+void BCLoader::print_name_to_index() {
     std::cout << "Printing bc index for : " << bc_file << "\n";
     std::cout << "------------------------------\n";
-    for (const auto& val_pair : seq_to_ind) {
-        auto & bc_name = val_pair.first;
-        auto & bc_ind = val_pair.second;
-        std::cout << "barcode: " << bc_name << " index : "  << bc_ind << "\n";
-    
-    }
+    UtilC::print_map(name_to_ind);
+    std::cout << "...............................\n";
+}
+
+
+void BCLoader::print_seq_to_index() {
+    std::cout << "Printing bc index for : " << bc_file << "\n";
+    std::cout << "------------------------------\n";
+    UtilC::print_map(seq_to_ind);
     std::cout << "...............................\n";
 
 }

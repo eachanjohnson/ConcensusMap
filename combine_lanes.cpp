@@ -10,6 +10,7 @@
 
 #include "map_loader.hpp"
 #include "my_exception.h"
+#include "utils.hpp"
 
 namespace po = boost::program_options;
 namespace fs = std::experimental::filesystem;
@@ -32,8 +33,6 @@ class combine_lanes {
             std::vector<std::string> vec2);
         template <typename T>
             std::vector<std::string> change_to_string(std::vector<T> vec);
-        template <typename T1, typename T2>
-            void print_map(std::map<T1, T2> lmap);
         void print_some_maps();
         bool has_suffix(const std::string &str, const std::string &suffix);
         std::string get_suf_delim (std::string filename);
@@ -79,33 +78,15 @@ bool combine_lanes::has_suffix(const std::string &str, const std::string &suffix
            str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-template <typename T1, typename T2>
-void combine_lanes::print_map(std::map<T1, T2> lmap) {
-    for (const auto & e : lmap) {
-        auto key = e.first;
-        auto val = e.second;
-        std::cout << "key: " << key << " val: " << val << "\n";
-    }
-}
-
-template <>
-void combine_lanes::print_map<std::string, int>(std::map<std::string, int> lmap) {
-    for (const auto & e : lmap) {
-        auto key = e.first;
-        auto val = e.second;
-        std::cout << "key: " << key << " val: " << std::to_string(val) << "\n";
-    }
-}
-
 void combine_lanes::print_some_maps() {
     std::cout << "Printing i5_key_to_plate." << "\n";
-    print_map(i5_key_to_plate);
+    UtilC::print_map(i5_key_to_plate);
     std::cout << "Printing i5_key_to_quadrant.\n";
-    print_map(i5_key_to_quadrant);
+    UtilC::print_map(i5_key_to_quadrant);
     std::cout << "Printing i7_map.\n";
-    print_map(i7_map);
+    UtilC::print_map(i7_map);
     std::cout << "Printing plate_bcs_map.\n";
-    print_map(plate_bcs_map);
+    UtilC::print_map(plate_bcs_map);
     //std::cout << "Printing comp_map.\n";
     //print_map(compound_map);
 
