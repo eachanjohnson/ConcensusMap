@@ -246,8 +246,8 @@ std::string combine_lanes::get_out_header() {
     header_vec.push_back("mmoles_per_liter");
     header_vec.push_back("strain_id");
     header_vec.push_back("strain_gene");
-    header_vec.push_back("count_unique");
-    header_vec.push_back("count_mixed");
+    header_vec.push_back("count_exact");
+    header_vec.push_back("count_nonexact");
     header_vec.push_back("count_all");
     std::string header_str = get_outstring(header_vec);
     return header_str;
@@ -263,8 +263,8 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
     std::string i7_id = parts[2];
     std::string sbc_id = parts[3];
     
-    std::string count_str = parts[4];
-    std::string count_mixed_str = parts[5]; 
+    std::string count_exact_str = parts[4];
+    std::string count_nonexact_str = parts[5]; 
     std::string count_all_str = parts[6];
     int i5_plate = i5_key_to_plate[i5_id];
     int i5_quadrant = i5_key_to_quadrant[i5_id];
@@ -299,8 +299,8 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
     out_vec.push_back(compound_info);
     out_vec.push_back(sbc_id);
     out_vec.push_back(sbc_gene);
-    out_vec.push_back(count_str);
-    out_vec.push_back(count_mixed_str);
+    out_vec.push_back(count_exact_str);
+    out_vec.push_back(count_nonexact_str);
     out_vec.push_back(count_all_str);
    
     std::string mapped_str = get_outstring(out_vec); 

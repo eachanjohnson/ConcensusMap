@@ -106,8 +106,16 @@ std::tuple<std::string, std::string, int, std::string> BCLoader::match_barcode(s
 }
 
 int BCLoader::get_index(std::string lbc) {
+            
     int lindex = seq_to_ind[lbc];
+    if (lindex == 0) {
+        // The valid value for a barcode will always be positive
+        std::string mystr = "Probably illegal barcode: " + lbc;
+        throw my_exception(mystr);
+    }
+    
     return lindex;
+    
 }
 
 std::string BCLoader::val_from_bc_map(std::string lbc) {
@@ -171,7 +179,9 @@ bool BCLoader::load_map() {
             std::cout << "Ignored the header. " << "\n";
             std::getline(words, lstr);
         }
-        int l_index = 0;
+        // the initial value of l_index is changed from zero to one as
+        // zero leads to map an emply barcode to first barcode.
+        int l_index = 1;
         while (std::getline(words, lstr)) {
             bool res = boost::regex_search(lstr, what, expr);
             if (res) {

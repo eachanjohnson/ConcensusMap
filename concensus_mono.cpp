@@ -57,9 +57,12 @@ class concensus_mono {
 		int mm_i7;
 		int mm_sbc;
         unsigned int total_run = 0;
-        unsigned long aligned_count = 0;
+  
+        unsigned long unique_exact_count = 0;
+        unsigned long unique_nonexact_count = 0;
+        unsigned long ambiguous_count = 0;
+        unsigned long no_match_count = 0;
         unsigned long total_count = 0;
-        unsigned long unique_count = 0;
         
 
         po::options_description desc;
@@ -68,8 +71,9 @@ class concensus_mono {
         BCLoader i7_loader;
         BCLoader sbc_loader;
         BCLoader stagger_loader;
-        std::unordered_map<std::string, unsigned int> count_map; 
-        std::unordered_map<std::string, unsigned int> count_map_mixed; 
+        std::unordered_map<std::string, unsigned int> count_map_exact; 
+        std::unordered_map<std::string, unsigned int> count_map_nonexact; 
+        
 
 };
 
@@ -246,14 +250,31 @@ std::string concensus_mono::get_combined(std::string i5_val, std::string i7_val,
 }
 
 void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tuple, const match_t& sbc_tuple) {
+
+    std::string no_match_str = "no_match";
+    std::string ambiguous_str = "ambiguous";
+    std::string unique_str = "unique";
+
     total_count++;
     std::string i5_mt = std::get<0>(i5_tuple);
     std::string i7_mt = std::get<0>(i7_tuple);
     std::string sbc_mt = std::get<0>(sbc_tuple);
-    if (i5_mt.compare("no_match") == 0 || i7_mt.compare("no_match") == 0 || sbc_mt.compare("no_match") == 0) {
-        return;
-    } else {
-        aligned_count++;
+
+    if (0 == i5_mt.compare(no_match_str) || 
+            0 == i7_mt.compare(no_match_str) || 
+            0 == sbc_mt.compare(no_match_str)) {
+
+        no_match_count++;
+
+    } else if (0 == i5_mt.compare(ambiguous_str) || 
+            0 == i7_mt.compare(ambiguous_str) || 
+            0 == sbc_mt.compare(ambiguous_str)) {
+
+        ambiguous_count++;
+        
+    } else if (0 == i5_mt.compare(unique_str) && 
+               0 == i7_mt.compare(unique_str) && 
+               0 == sbc_mt.compare(unique_str)) {
 
         std::string i5_val = std::get<1>(i5_tuple);
         std::string i7_val = std::get<1>(i7_tuple);
@@ -263,20 +284,36 @@ void concensus_mono::write_entry(const match_t& i5_tuple, const match_t& i7_tupl
         unsigned int i7_index = i7_loader.get_index(i7_val);
         unsigned int sbc_index = sbc_loader.get_index(sbc_val);
 
+        // None of the index should be zero
+        assert(i5_index > 0);
+        assert(i7_index > 0);
+        assert(sbc_index > 0);
+
         std::string key_val = get_key_val(i5_index, i7_index, sbc_index);
 
-        if (i5_mt.compare("unique") == 0 && i7_mt.compare("unique") == 0 && sbc_mt.compare("unique") == 0) {
-            //std::cout << "All unique" << "\n";
-            unique_count++;
-                     
-            count_map[key_val] += 1;
-        } else {
-            assert(i5_mt.compare("no_match") != 0);    
-            assert(i7_mt.compare("no_match") != 0);    
-            assert(sbc_mt.compare("no_match") != 0);    
-            // Mix of ambiguous and unique
-            count_map_mixed[key_val] += 1;
+        //std::cout << "All unique" << "\n";
+        int i5_dist = std::get<2>(i5_tuple);         
+        int i7_dist = std::get<2>(i7_tuple);         
+        int sbc_dist = std::get<2>(sbc_tuple);   
+ 
+        if (0 == i5_dist && 
+            0 == i7_dist && 
+            0 == sbc_dist) {
+
+            unique_exact_count++;
+            count_map_exact[key_val] += 1;
+
+        } else {   
+
+            unique_nonexact_count++;  
+            count_map_nonexact[key_val] += 1;
+
         }
+
+    } else {
+        std::string mystr = "Illegal match type(s): i5_mt: " + i5_mt + 
+            " i7_mt: " + i7_mt + " sbc_mt:" + sbc_mt;
+        throw my_exception(mystr);
     }
         
 }
@@ -285,8 +322,9 @@ void concensus_mono::write_outfile(std::string outfile) {
     std::ofstream outf(outfile);
     if (outf.is_open()) {
         // Write header
-        outf << "i5_index" << "\t" << "i7_index" << "\t" << "sbc_index" << "\t" << "read_count_unique" << 
-            "\t" << "read_count_mixed" << "\t" << "read_count_all" << "\n";
+        outf << "i5_index" << "\t" << "i7_index" << "\t" << "sbc_index" 
+             << "\t" << "read_count_exact" << "\t" << "read_count_nonexact" 
+             << "\t" << "read_count_all" << "\n";
         std::vector<std::string> i5_vec = i5_loader.get_bc_vector();
         std::vector<std::string> i7_vec = i7_loader.get_bc_vector();
         std::vector<std::string> sbc_vec = sbc_loader.get_bc_vector();
@@ -300,17 +338,17 @@ void concensus_mono::write_outfile(std::string outfile) {
 
                     std::string key_val = get_key_val(i5_index, i7_index, sbc_index);
 
-                    unsigned int val = count_map[key_val];
-                    unsigned int val_mixed = count_map_mixed[key_val];
-                    unsigned int val_all = val + val_mixed;
-                    std::string val_str = std::to_string(val);
-                    std::string val_mixed_str = std::to_string(val_mixed);
+                    unsigned int val_exact = count_map_exact[key_val];
+                    unsigned int val_nonexact = count_map_nonexact[key_val];
+                    unsigned int val_all = val_exact + val_nonexact;
+                    std::string val_exact_str = std::to_string(val_exact);
+                    std::string val_nonexact_str = std::to_string(val_nonexact);
                     std::string val_all_str = std::to_string(val_all);
 
                     std::string i5_id = i5_loader.id_from_rev_map(i5_);
                     std::string i7_id = i7_loader.id_from_rev_map(i7_);
                     std::string sbc_id = sbc_loader.id_from_rev_map(sbc_);
-                    std::string out_str = i5_id + "\t" + i7_id + "\t" + sbc_id + "\t" + val_str + "\t" + val_mixed_str + "\t" + val_all_str;
+                    std::string out_str = i5_id + "\t" + i7_id + "\t" + sbc_id + "\t" + val_exact_str + "\t" + val_nonexact_str + "\t" + val_all_str;
                     outf << out_str << "\n";   
                 }
             }
@@ -400,7 +438,8 @@ void concensus_mono::core_engine() {
         
         if (read_count % 1000000 == 0) {
             std::cout << "read_count: " << read_count << "\n";
-            std::cout << "count_map_size: " << count_map.size() << "\n";
+            std::cout << "count_map_exact_size: " << count_map_exact.size() << 
+                 "\n";
             auto t = std::time(nullptr);
 			auto tm = *std::localtime(&t);
 
@@ -415,9 +454,15 @@ void concensus_mono::core_engine() {
     std::string outfile_str = outdirpath + "/" + prefix_str + "_outfile.txt";
 	
     write_outfile(outfile_str);
-    std::cout << "Unique read count:\t" << unique_count << "\n";
-    std::cout << "Aligned read count:\t" << aligned_count << "\n";
+    std::cout << "Unique exact read count:\t" << unique_exact_count << "\n";
+    std::cout << "Unique nonexact read count:\t" << unique_nonexact_count 
+        << "\n";
+    std::cout << "Ambiguous read count:\t" << ambiguous_count << "\n";
+    std::cout << "No match read count:\t" << no_match_count << "\n";
     std::cout << "Total read count:\t" << total_count << "\n";
+    unsigned long total_count_t = unique_exact_count + unique_nonexact_count + 
+        ambiguous_count + no_match_count;
+    assert(total_count_t == total_count);
     
 }
 
