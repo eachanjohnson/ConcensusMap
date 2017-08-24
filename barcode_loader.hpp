@@ -210,14 +210,14 @@ bool BCLoader::load_map() {
 
 void BCLoader::print_map() {
      
-    std::cout << "Printing forward bc map for : " << bc_file << "\n";
+    std::cout << "Printing name to seq for : " << bc_file << "\n";
     std::cout << "------------------------------\n";
     UtilC::print_map(bc_map);
     std::cout << "...............................\n";
 }
 
 void BCLoader::print_name_to_index() {
-    std::cout << "Printing bc index for : " << bc_file << "\n";
+    std::cout << "Printing name to index for : " << bc_file << "\n";
     std::cout << "------------------------------\n";
     UtilC::print_map(name_to_ind);
     std::cout << "...............................\n";
@@ -225,7 +225,7 @@ void BCLoader::print_name_to_index() {
 
 
 void BCLoader::print_seq_to_index() {
-    std::cout << "Printing bc index for : " << bc_file << "\n";
+    std::cout << "Printing seq to index for : " << bc_file << "\n";
     std::cout << "------------------------------\n";
     UtilC::print_map(seq_to_ind);
     std::cout << "...............................\n";

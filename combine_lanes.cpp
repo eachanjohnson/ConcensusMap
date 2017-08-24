@@ -145,9 +145,9 @@ void combine_lanes::load_maps() {
     std::vector<std::string> i7_key = i7_plates_map.getColumn<std::string>("i7_key");
     std::vector<int> i7_quadrant = i7_plates_map.getColumn<int>("quadrant");
     std::vector<std::string> i7_row = i7_plates_map.getColumn<std::string>("row");
-    std::vector<int> i7_column = i7_plates_map.getColumn<int>("column");
+    std::vector<std::string> i7_column = i7_plates_map.getColumn<std::string>("column");
     std::vector<std::string> i7_key_quadrant = combine_vectors<std::string, int>(i7_key, i7_quadrant, "_");
-    std::vector<std::string> i7_row_column = combine_vectors<std::string, int>(i7_row, i7_column, "");
+    std::vector<std::string> i7_row_column = combine_vectors<std::string, std::string>(i7_row, i7_column, "");
     i7_map = make_map(i7_key_quadrant, i7_row_column);    
 
     cdelim = get_suf_delim(plate_bcs_str);

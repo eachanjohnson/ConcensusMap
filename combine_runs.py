@@ -1,6 +1,6 @@
-file1 = '/broad/IDP-Dx_storage/Concensus_results/SN0118837_summary.csv'
-file2 = '/broad/IDP-Dx_storage/Concensus_results/SN0119690_summary.csv'
-outfile = '/broad/IDP-Dx_storage/Concensus_results/SN0118837_SN0119690_combined.csv'
+file1 = '/broad/IDP-Dx_storage/Concensus_results/SN0075811_summary.csv'
+file2 = '/broad/IDP-Dx_storage/Concensus_results/SN0075812_summary.csv'
+outfile = '/broad/IDP-Dx_storage/Concensus_results/SN0118837AB_new_py.csv'
 count = 0
 
 def add_str(var1, var2):
