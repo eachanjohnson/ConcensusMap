@@ -50,7 +50,11 @@ class ConfDict(object):
     def storeConfigFromOptions(self):
         options = self.options
         self.use_qsub = options.use_qsub
+        self.do_align = options.do_align
+        self.do_combine = options.do_combine
         self.project_id = options.project_id
+        self.plate_bcs = options.plate_bcs
+        self.comp_map = options.comp_map
 
     def storeConfigMixed(self):
         options = self.options
@@ -109,6 +113,7 @@ class ConfDict(object):
         Out_dir = self.Temp_dir
         ldelim = self.ldelim
         use_qsub = self.use_qsub
+        Results_path = self.Results_path
 
         UGER_cbp_dir = Out_dir + ldelim + "UGER_cbp"
         Log_dir = Out_dir + ldelim + "logdir"
@@ -125,11 +130,19 @@ class ConfDict(object):
             os.makedirs(Count_dir)
         if not os.path.exists(Summary_dir):
             os.makedirs(Summary_dir)
+        if not os.path.exists(Results_path):
+            os.makedirs(Results_path)
 
         self.UGER_cbp_dir = UGER_cbp_dir
         self.Log_dir = Log_dir
         self.Count_dir = Count_dir
         
+
+    def createScriptPath(self):
+        basepath = self.basepath
+        ldel = self.ldelim
+        combine_lanes_scr = basepath + ldel + "combine_lanes"
+        self.combine_lanes_scr = combine_lanes_scr
 
     def loadConfig(self):
         self.storeConfigFromConfig()
@@ -137,6 +150,7 @@ class ConfDict(object):
         self.storeDerivedPaths()
         self.storeConfigMixed()
         self.createSubPaths()
+        self.createScriptPath()
 
     def storeDerivedPaths(self):
         ldelim = self.ldelim

@@ -24,7 +24,6 @@ class Concensus:
         self.confd = confd
 
 
-
     def get_prefix_set_paired(self):
         confd = self.confd
         Input_dir = confd.Input_dir
@@ -104,11 +103,40 @@ class Concensus:
             call(joblist_cmd.split())
  
 
+    def combine_lanes(self):
+        confd = self.confd
+        ldel = confd.ldelim
+        combine_lanes_scr = confd.combine_lanes_scr
+        i5_plates = confd.i5_plates_file 
+        i7_plates = confd.i7_plates_file
+        strains_map = confd.strains_map_file
+        plate_bcs = confd.plate_bcs
+        comp_map = confd.comp_map
+        count_dir = confd.Count_dir
+        results_path = confd.Results_path
+        project_id = confd.project_id
+        summary_file = results_path + ldel + project_id + "_summary.csv"
+        
+        combine_lanes_cmd = combine_lanes_scr + " --i5_plates " + i5_plates + \
+           " --i7_plates " + i7_plates + " --strains_map " + strains_map + \
+           " --plate_bcs " + plate_bcs + " --comp_map " + comp_map + \
+           " --count_dir " + count_dir + " --summary_file " + summary_file 
+        print("combine_lanes_cmd: ")
+        print(combine_lanes_cmd)
+        use_qsub = confd.use_qsub
+        if use_qsub:
+            call(combine_lanes_cmd.split())
   
     def mainFunc(self):
         """ """
         prefix_set = self.get_prefix_set_paired()
-        self.build_core_jobs(prefix_set)
+        confd = self.confd
+        do_align = confd.do_align
+        do_combine = confd.do_combine
+        if do_align:
+            self.build_core_jobs(prefix_set)
+        if do_combine:
+            self.combine_lanes()
             
                
 
@@ -119,9 +147,13 @@ if __name__ == "__main__":
     parser.add_argument('--project_id', required = True, default = 'none', help = 'Project id')
     parser.add_argument('--seq_id', required = False, default = 'none', help = 'Sequencing id used to make raw_seq_path')
     parser.add_argument('--no_qsub', dest = 'use_qsub', action = 'store_false', default = True, help = 'Does not submit qsub jobs.' )
+    parser.add_argument('--no_align', dest = 'do_align', action = 'store_false', default = True, help = 'Does not align to the fastq files.' )
+    parser.add_argument('--no_combine', dest = 'do_combine', action = 'store_false', default = True, help = 'Does not combine from multiple lanes.' )
     parser.add_argument('--raw_seq_path', required = False, default = 'none', help = 'Directory for raw sequene files (absolute)')
     parser.add_argument('--temp_path', required = False, default = 'none', help = 'Will contain the temporary results')
     parser.add_argument('--results_path', required = False, default = 'none', help = 'Will contain the path to the results')
+    parser.add_argument('--plate_bcs', required = True, type = str, default = 'none', help = 'Plate barcode map')
+    parser.add_argument('--comp_map', required = True, type = str, default = 'none', help = 'Compound map')
     parser.add_argument('--Suffix_short', default = 'none', required = False, help = 'Update the value of Suffix_short')
     parser.add_argument('--Suffix_long', default = 'none', required = False, help = 'Update the value of Suffix_long')
     parser.add_argument("--no_login_name", dest = "use_login_name", action = 'store_false', default = True, help = 'Generate results in a username specific directory')
