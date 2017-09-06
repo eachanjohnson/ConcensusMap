@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <tuple>
 #include <experimental/filesystem>
 
 #include <boost/regex.hpp>
@@ -38,6 +39,10 @@ class combine_lanes {
         std::string get_suf_delim (std::string filename);
         std::string get_outstring(std::vector<std::string> lvec);
         std::string get_out_header();
+        std::string get_tag_str(std::string key_str, std::string pool_str);
+        std::tuple<int, int, int> get_counts(std::string key_str);
+        void get_pool_lane_map(std::map<int, int> lane_pool_map);
+
     private:
         std::string i5_plates_str;
         std::string i7_plates_str;
@@ -46,8 +51,10 @@ class combine_lanes {
         std::string summary_file_str;
         std::string plate_bcs_str;
         std::string comp_map_str;
+        std::string pool_lane_str;
         po::options_description desc;
         std::map<int, std::string> count_file_map;
+        std::map<int, std::vector<int>> pool_lane_map;
 
         std::map<std::string, int> i5_key_to_plate;
         std::map<std::string, int> i5_key_to_quadrant;
@@ -132,6 +139,14 @@ std::map<std::string, std::string> combine_lanes::make_map(std::vector<std::stri
     return lmap;
 }
 
+void combine_lanes::get_pool_lane_map(std::map<int, int> lane_pool_map) {
+    for (const auto& e : lane_pool_map) {
+        int lane = e.first;
+        int pool = e.second;
+        pool_lane_map[pool].push_back(lane);
+    }
+}
+
 void combine_lanes::load_maps() {
 
     std::string cdelim;
@@ -139,6 +154,11 @@ void combine_lanes::load_maps() {
     MapLoader i5_plates_map(i5_plates_str, cdelim);
     i5_key_to_plate = i5_plates_map.getMap<std::string, int>("i5_key", "i5_plate");
     i5_key_to_quadrant = i5_plates_map.getMap<std::string, int>("i5_key", "quadrant");
+    
+    cdelim = get_suf_delim(pool_lane_str);
+    MapLoader pool_lane_mapall(pool_lane_str, cdelim);
+    std::map<int, int> lane_pool_map = pool_lane_mapall.getMap<int, int>("Lane", "Pool");
+    get_pool_lane_map(lane_pool_map);
 
     cdelim = get_suf_delim(i7_plates_str);
     MapLoader i7_plates_map(i7_plates_str, cdelim);
@@ -215,7 +235,7 @@ std::string combine_lanes::get_outstring(std::vector<std::string> lvec) {
 
 std::string combine_lanes::get_out_header() {
     std::vector<std::string> header_vec;
-    header_vec.push_back("lane");
+    header_vec.push_back("pool");
     header_vec.push_back("i5_id");
     header_vec.push_back("i5_plate");
     header_vec.push_back("plate_barcode");
@@ -235,21 +255,16 @@ std::string combine_lanes::get_out_header() {
 
 }
 
-std::string combine_lanes::get_mapped_str(std::string key_str) {
+std::string combine_lanes::get_tag_str(std::string key_str, std::string pool_str) {
     std::string tab_delim = "\t";
     std::vector<std::string> parts = split(key_str, tab_delim);
-    std::string lane_str = parts[0];
-    int lane = std::stoi(lane_str); 
-    std::string i5_id = parts[1];
-    std::string i7_id = parts[2];
-    std::string sbc_id = parts[3];
+    std::string i5_id = parts[0];
+    std::string i7_id = parts[1];
+    std::string sbc_id = parts[2];
     
-    std::string count_exact_str = parts[4];
-    std::string count_nonexact_str = parts[5]; 
-    std::string count_all_str = parts[6];
     int i5_plate = i5_key_to_plate[i5_id];
     int i5_quadrant = i5_key_to_quadrant[i5_id];
-    std::string plate_pool = std::to_string(i5_plate) + "_" + lane_str;
+    std::string plate_pool = std::to_string(i5_plate) + "_" + pool_str;
     std::string plate_barcode = plate_bcs_map[plate_pool];
     //std::cout << "plate_pool: " << plate_pool << "\n";
     //std::cout << "plate_barcode: " << plate_barcode << "\n";
@@ -270,7 +285,7 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
     std::string sbc_gene = tag_to_gene[sbc_id]; 
 
     std::vector<std::string> out_vec;
-    out_vec.push_back(lane_str);
+    out_vec.push_back(pool_str);
     out_vec.push_back(i5_id);
     out_vec.push_back(std::to_string(i5_plate));
     out_vec.push_back(plate_barcode);
@@ -280,13 +295,23 @@ std::string combine_lanes::get_mapped_str(std::string key_str) {
     out_vec.push_back(compound_info);
     out_vec.push_back(sbc_id);
     out_vec.push_back(sbc_gene);
-    out_vec.push_back(count_exact_str);
-    out_vec.push_back(count_nonexact_str);
-    out_vec.push_back(count_all_str);
    
-    std::string mapped_str = get_outstring(out_vec); 
-    
-    return mapped_str;
+    std::string tag_str = get_outstring(out_vec); 
+    return tag_str;
+
+}
+
+std::tuple<int, int, int> combine_lanes::get_counts(std::string key_str) {
+
+    std::string tab_delim = "\t";
+    std::vector<std::string> parts = split(key_str, tab_delim);
+    std::string count_exact_str = parts[3];
+    std::string count_nonexact_str = parts[4]; 
+    std::string count_all_str = parts[5];
+    int count_exact = std::stoi(count_exact_str);
+    int count_nonexact = std::stoi(count_nonexact_str);
+    int count_all = std::stoi(count_all_str);
+    return std::make_tuple(count_exact, count_nonexact, count_all);
 }
 
 
@@ -295,38 +320,67 @@ void combine_lanes::join_lanes() {
     std::ofstream summary_file(summary_file_str);
     std::string header_str = get_out_header();
     summary_file << header_str << "\n";
-    for (const auto& e : count_file_map) {
-        int lane = e.first;
-        std::string lfile_str = e.second;
-        std::cout << "lane: " << lane << " lfile: " << lfile_str << "\n"; 
-        std::string ldelim = "/";
-        std::string lpath = count_dir_str + ldelim + lfile_str;
+    std::string ldelim = "/";
+
+    for (const auto& e: pool_lane_map) {
+        int pool = e.first;
+        std::vector<int> lanes = e.second;
+        std::vector <std::ifstream> if_vec;
+        for (const auto& llane : lanes) {
+            std::string lfile_str = count_file_map[llane];
+            std::string lpath = count_dir_str + ldelim + lfile_str;
+            if_vec.emplace_back(lpath);
+        }
+
+        std::string line_junk;
+        for (std::vector<int>::size_type j = 0; j != if_vec.size(); j++) {
+            std::getline(if_vec[j], line_junk);
+        }
 
         std::string line;
-        std::ifstream lfile(lpath);
-        if (lfile.is_open()) {
-            // Ignore the first line as it is the header
-            std::getline (lfile, line);
-            while (std::getline (lfile, line)) {
-                std::string key_str = std::to_string(lane) + "\t" + line;
-                std::string mapped_str = get_mapped_str(key_str);
-                summary_file << mapped_str << "\n";
+        while (std::getline(if_vec[0], line)) {
+            // Get the tag and all other numbers
+            std::string pool_str = std::to_string(pool);
+            std::string ltag_str = get_tag_str (line, pool_str);
+            auto lcounts = get_counts(line);
+            int count_exact = std::get<0>(lcounts);
+            int count_nonexact = std::get<1>(lcounts);
+            int count_all = std::get<2>(lcounts);
+            for (std::vector<int>::size_type j = 1; j != if_vec.size(); j++) {
+                std::string line_j;
+                std::getline(if_vec[j], line_j);
+                auto lcounts_j = get_counts(line_j);
+                int count_exact_j = std::get<0>(lcounts_j);
+                int count_nonexact_j = std::get<1>(lcounts_j);
+                int count_all_j = std::get<2>(lcounts_j);
+                count_exact += count_exact_j;
+                count_nonexact += count_nonexact_j;
+                count_all += count_all_j;
+
             }
+
+            std::string count_exact_str = std::to_string(count_exact);
+            std::string count_nonexact_str = std::to_string(count_nonexact);
+            std::string count_all_str = std::to_string(count_all);
+
+            std::vector<std::string> out_vec;
+            out_vec.push_back(ltag_str);
+            out_vec.push_back(count_exact_str);
+            out_vec.push_back(count_nonexact_str);
+            out_vec.push_back(count_all_str);
+            std::string mapped_str = get_outstring(out_vec); 
+            summary_file << mapped_str << "\n";
         }
-        lfile.close();
-        std::cout << "Finished reading " << lpath << "\n";
-        
     }
-  
+    
     summary_file.close();
-   
 }
 
 void combine_lanes::print_help() {
     std::cout << desc << "\n";
     std::cout << "Usage: combine_lanes --i5_plates <i5 plates> --i7_plates <i7 plates> "
-        "--plate_bcs <plate_bcs> --comp_map <comp_map> --strains_map <strains map> "
-        "--count_dir <count dir> --summary_file <summary_file>\n\n";
+        "--plate_bcs <plate_bcs> --comp_map <comp_map> --pool_lane_str <pool_lane_str> "
+        "--strains_map <strains map> --count_dir <count dir> --summary_file <summary_file>\n\n";
 }
 
 bool combine_lanes::parse_args(int argc, char* argv[]) {
@@ -338,6 +392,7 @@ bool combine_lanes::parse_args(int argc, char* argv[]) {
         ("i7_plates", po::value<std::string>(&i7_plates_str), "index7 plates file")    
         ("plate_bcs", po::value<std::string>(&plate_bcs_str), "Plate barcodes file")
         ("comp_map", po::value<std::string>(&comp_map_str), "Compounds map file")
+        ("pool_lane_str", po::value<std::string>(&pool_lane_str), "Pool to lane map file")
         ("strains_map", po::value<std::string>(&strains_map_str), "strains map file") 
         ("count_dir", po::value<std::string>(&count_dir_str), "directory for count files") 
         ("summary_file", po::value<std::string>(&summary_file_str), "summary_file")

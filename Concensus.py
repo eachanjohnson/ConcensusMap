@@ -112,6 +112,7 @@ class Concensus:
         strains_map = confd.strains_map_file
         plate_bcs = confd.plate_bcs
         comp_map = confd.comp_map
+        pool_lane = confd.pool_lane
         count_dir = confd.Count_dir
         results_path = confd.Results_path
         project_id = confd.project_id
@@ -120,6 +121,7 @@ class Concensus:
         combine_lanes_cmd = combine_lanes_scr + " --i5_plates " + i5_plates + \
            " --i7_plates " + i7_plates + " --strains_map " + strains_map + \
            " --plate_bcs " + plate_bcs + " --comp_map " + comp_map + \
+           " --pool_lane_str " + pool_lane + \
            " --count_dir " + count_dir + " --summary_file " + summary_file 
         print("combine_lanes_cmd: ")
         print(combine_lanes_cmd)
@@ -154,6 +156,7 @@ if __name__ == "__main__":
     parser.add_argument('--results_path', required = False, default = 'none', help = 'Will contain the path to the results')
     parser.add_argument('--plate_bcs', required = True, type = str, default = 'none', help = 'Plate barcode map')
     parser.add_argument('--comp_map', required = True, type = str, default = 'none', help = 'Compound map')
+    parser.add_argument('--pool_lane', required = True, type = str, default = 'none', help = 'Pool lane map')
     parser.add_argument('--Suffix_short', default = 'none', required = False, help = 'Update the value of Suffix_short')
     parser.add_argument('--Suffix_long', default = 'none', required = False, help = 'Update the value of Suffix_long')
     parser.add_argument("--no_login_name", dest = "use_login_name", action = 'store_false', default = True, help = 'Generate results in a username specific directory')

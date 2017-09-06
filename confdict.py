@@ -55,6 +55,7 @@ class ConfDict(object):
         self.project_id = options.project_id
         self.plate_bcs = options.plate_bcs
         self.comp_map = options.comp_map
+        self.pool_lane = options.pool_lane
 
     def storeConfigMixed(self):
         options = self.options
