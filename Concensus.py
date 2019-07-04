@@ -56,7 +56,7 @@ class Concensus:
         if not os.path.isfile(lfile):
             lfile += ".gz"
             if not os.path.isfile(lfile):
-                raise OSError("File not found: " + lfile1)
+                raise OSError("File not found: " + lfile)
         return lfile
 
     def build_core_jobs(self, prefix_set):
